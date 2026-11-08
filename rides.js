@@ -142,6 +142,23 @@
     const details = makeElement("div", "ride-card__details");
     if (ride.weather) details.append(makeElement("p", "ride-card__weather", ride.weather));
     if (ride.notes) details.append(makeElement("p", "ride-card__notes", ride.notes));
+    if (Array.isArray(ride.photos) && ride.photos.length) {
+      const gallery = makeElement("div", "ride-photo-strip");
+      gallery.setAttribute("aria-label", "Ride photos");
+      ride.photos.forEach(function (photo) {
+        const image = document.createElement("img"); image.alt = photo.name || "Ride photo"; image.loading = "lazy"; image.dataset.photoId = photo.id;
+        if (photo.url) { image.src = photo.url; image.addEventListener("error", function () { image.removeAttribute("src"); if (global.NightRideMaintenance) global.NightRideMaintenance.hydrateImages(gallery); }, { once: true }); }
+        gallery.append(image);
+      });
+      details.append(gallery);
+    }
+    if (Array.isArray(ride.routePoints) && ride.routePoints.length > 1) {
+      const map = makeElement("div", "route-map");
+      map.dataset.routePoints = JSON.stringify(ride.routePoints);
+      map.setAttribute("role", "img");
+      map.setAttribute("aria-label", "Route map for " + (ride.route || "ride"));
+      details.append(map);
+    }
 
     const actions = makeElement("div", "ride-card__actions");
     const edit = makeElement("button", "button button--small button--secondary", "Edit");
@@ -154,7 +171,20 @@
     remove.dataset.action = "delete-ride";
     remove.dataset.rideId = ride.id;
     remove.setAttribute("aria-label", "Delete " + (ride.route || "ride"));
-    actions.append(edit, remove);
+    actions.append(edit);
+    const share = makeElement("button", "button button--small", "Share");
+    share.type = "button"; share.dataset.action = "share-ride"; share.dataset.rideId = ride.id;
+    share.setAttribute("aria-label", "Copy a private share link for " + (ride.route || "ride"));
+    actions.append(share);
+    if (Array.isArray(ride.routePoints) && ride.routePoints.length > 1) {
+      const exportButton = makeElement("button", "button button--small button--secondary", "Export GPX");
+      exportButton.type = "button";
+      exportButton.dataset.action = "export-gpx";
+      exportButton.dataset.rideId = ride.id;
+      exportButton.setAttribute("aria-label", "Export GPX for " + (ride.route || "ride"));
+      actions.append(exportButton);
+    }
+    actions.append(remove);
 
     item.append(header, metrics, route, details, actions);
     return item;
@@ -225,6 +255,10 @@
       weather: valueOf(form, ["weather"], "").trim(),
       notes: valueOf(form, ["notes"], "").trim()
     };
+    try { ride.routePoints = JSON.parse(valueOf(form, ["routePoints"], "[]") || "[]"); }
+    catch (error) { throw new Error("Imported route geometry is invalid."); }
+    try { ride.photos = JSON.parse(valueOf(form, ["photos"], "[]") || "[]"); }
+    catch (error) { throw new Error("Ride photo metadata is invalid."); }
     return global.NightRideStorage ? global.NightRideStorage.normalizeRide(ride, { strict: true }) : ride;
   }
 
@@ -241,6 +275,9 @@
     setValue(form, ["period", "timeOfDay"], ride.period);
     setValue(form, ["weather"], ride.weather);
     setValue(form, ["notes"], ride.notes);
+    setValue(form, ["routePoints"], JSON.stringify(ride.routePoints || []));
+    setValue(form, ["photos"], JSON.stringify(ride.photos || []));
+    form.dispatchEvent(new CustomEvent("routepointschange", { bubbles: true }));
     form.dataset.mode = "edit";
     const heading = document.querySelector("#ride-form-title, [data-ride-form-title]");
     if (heading) heading.textContent = "Edit ride";
@@ -253,6 +290,9 @@
     setValue(form, ["id", "rideId"], "");
     setValue(form, ["date"], (defaults && defaults.date) || new Date().toISOString().slice(0, 10));
     setValue(form, ["period", "timeOfDay"], (defaults && defaults.period) || "night");
+    setValue(form, ["routePoints"], "[]");
+    setValue(form, ["photos"], "[]");
+    form.dispatchEvent(new CustomEvent("routepointschange", { bubbles: true }));
     form.dataset.mode = "add";
     const heading = document.querySelector("#ride-form-title, [data-ride-form-title]");
     if (heading) heading.textContent = "Log a ride";

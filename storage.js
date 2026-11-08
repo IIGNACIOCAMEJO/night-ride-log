@@ -50,6 +50,21 @@
     const source = input && typeof input === "object" ? input : {};
     const strict = options && options.strict;
     const periodSource = text(source.period || source.timeOfDay).toLowerCase();
+    const photos = Array.isArray(source.photos) ? source.photos.slice(0, 8).map(function (photo) {
+      if (!photo || typeof photo !== "object") return null;
+      const id = text(photo.id);
+      return id ? { id: id, name: text(photo.name, "Ride photo"), type: text(photo.type, "image/jpeg"), size: Math.max(0, finiteNumber(photo.size, 0)), url: text(photo.url), createdAt: text(photo.createdAt) } : null;
+    }).filter(Boolean) : [];
+    const routePoints = Array.isArray(source.routePoints) ? source.routePoints.filter(function (point) { return point && typeof point === "object"; }).map(function (point) {
+      const lat = finiteNumber(point && point.lat, NaN);
+      const lon = finiteNumber(point && (point.lon != null ? point.lon : point.lng), NaN);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+      const normalized = { lat: lat, lon: lon };
+      const elevation = finiteNumber(point && (point.elevation != null ? point.elevation : point.ele), NaN);
+      if (Number.isFinite(elevation)) normalized.elevation = elevation;
+      if (point && typeof point.time === "string" && point.time) normalized.time = point.time;
+      return normalized;
+    }).filter(Boolean).slice(0, 25000) : [];
     const ride = {
       id: text(source.id) || makeId("ride"),
       date: text(source.date),
@@ -61,7 +76,9 @@
       bikeId: text(source.bikeId),
       period: periodSource === "day" ? "day" : "night",
       weather: text(source.weather),
-      notes: text(source.notes)
+      notes: text(source.notes),
+      routePoints: routePoints,
+      photos: photos
     };
     if (strict) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(ride.date) || Number.isNaN(Date.parse(ride.date + "T00:00:00"))) {
@@ -160,7 +177,7 @@
 
   function upsertRide(ride) {
     const normalized = normalizeRide(ride, { strict: true });
-    return update(function (state) {
+    const result = update(function (state) {
       if (!state.bikes.some(function (bike) { return bike.id === normalized.bikeId; })) {
         throw new Error("Select an existing bike for this ride.");
       }
@@ -168,30 +185,42 @@
       if (index >= 0) state.rides[index] = normalized;
       else state.rides.push(normalized);
     }, "ride-upsert");
+    if (global.NightRideAPI) global.NightRideAPI.queue("ride", "upsert", normalized);
+    return result;
   }
 
   function deleteRide(id) {
-    return update(function (state) {
+    const existing = getState().rides.find(function (ride) { return ride.id === id; });
+    const result = update(function (state) {
       state.rides = state.rides.filter(function (ride) { return ride.id !== id; });
     }, "ride-delete");
+    if (global.NightRideAPI) global.NightRideAPI.queue("ride", "delete", id);
+    if (existing && global.NightRideMaintenance && typeof global.NightRideMaintenance.removePhotos === "function") {
+      global.NightRideMaintenance.removePhotos((existing.photos || []).map(function (photo) { return photo.id; })).catch(function (error) { console.warn("Photo cleanup deferred.", error); });
+    }
+    return result;
   }
 
   function upsertBike(bike) {
     const normalized = normalizeBike(bike, { strict: true });
-    return update(function (state) {
+    const result = update(function (state) {
       const index = state.bikes.findIndex(function (item) { return item.id === normalized.id; });
       if (index >= 0) state.bikes[index] = normalized;
       else state.bikes.push(normalized);
     }, "bike-upsert");
+    if (global.NightRideAPI) global.NightRideAPI.queue("bike", "upsert", normalized);
+    return result;
   }
 
   function deleteBike(id) {
-    return update(function (state) {
+    const result = update(function (state) {
       if (state.rides.some(function (ride) { return ride.bikeId === id; })) {
         throw new Error("This bike has linked rides. Reassign or delete those rides first.");
       }
       state.bikes = state.bikes.filter(function (bike) { return bike.id !== id; });
     }, "bike-delete");
+    if (global.NightRideAPI) global.NightRideAPI.queue("bike", "delete", id);
+    return result;
   }
 
   function exportJSON() {

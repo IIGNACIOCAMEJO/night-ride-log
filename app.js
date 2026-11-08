@@ -7,11 +7,13 @@
   const views = new Set(["dashboard", "rides", "stats", "garage", "arcade", "settings"]);
   let state;
   let pendingConfirmation = null;
+  const API = global.NightRideAPI;
 
   function byId(id) { return document.getElementById(id); }
   function setText(id, value) { const node = byId(id); if (node) node.textContent = value; }
   function miles(value) { return Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 1 }); }
   function hours(minutes) { return (Number(minutes || 0) / 60).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function showFormError(id, error) { const node = byId(id); if (!node) return; node.textContent = error && error.message ? error.message : String(error); node.hidden = false; node.focus(); }
 
   function toast(message, error) {
     const region = byId("toast-region");
@@ -65,7 +67,7 @@
       else link.removeAttribute("aria-current");
     });
     if (active === "stats") global.requestAnimationFrame(renderStats);
-    global.scrollTo({ top: 0, behavior: "instant" });
+    global.scrollTo({ top: 0, behavior: "auto" });
   }
 
   function renderDashboard() {
@@ -179,14 +181,14 @@
     return Storage.normalizeBike({
       id: String(data.get("id") || "") || Storage.makeId("bike"),
       name: data.get("name"), make: data.get("make"), model: data.get("model"),
-      year: data.get("year") || new Date().getFullYear(), color: data.get("color")
+      year: data.get("year") || new Date().getFullYear(), odometer: data.get("odometer") || 0, color: data.get("color")
     }, { strict: true });
   }
 
   function openBike(id) {
     const form = byId("bike-form"); form.reset();
     const bike = state.bikes.find(function (item) { return item.id === id; });
-    [["bike-id", bike && bike.id], ["bike-name", bike && bike.name], ["bike-make", bike && bike.make], ["bike-model", bike && bike.model], ["bike-year", bike && bike.year], ["bike-color", bike && /^#[0-9a-f]{6}$/i.test(bike.color) ? bike.color : "#00d9e8"]].forEach(function (entry) { if (entry[1] != null) byId(entry[0]).value = entry[1]; });
+    [["bike-id", bike && bike.id], ["bike-name", bike && bike.name], ["bike-make", bike && bike.make], ["bike-model", bike && bike.model], ["bike-year", bike && bike.year], ["bike-odometer", bike && bike.odometer], ["bike-color", bike && /^#[0-9a-f]{6}$/i.test(bike.color) ? bike.color : "#00d9e8"]].forEach(function (entry) { if (entry[1] != null) byId(entry[0]).value = entry[1]; });
     setText("bike-dialog-title", bike ? "Edit bike" : "Add bike");
     byId("bike-form-error").hidden = true;
     showDialog(byId("bike-dialog"));
@@ -211,6 +213,7 @@
     if (name === "new-bike") openBike();
     if (name === "edit-bike") openBike(action.dataset.bikeId);
     if (name === "close-bike-dialog") closeDialog(byId("bike-dialog"));
+    if (name === "close-account-dialog") closeDialog(byId("account-dialog"));
     if (name === "delete-ride") {
       if (await confirmAction("Delete this ride permanently?", "Delete ride")) { Storage.deleteRide(action.dataset.rideId); toast("Ride deleted."); }
     }
@@ -228,13 +231,13 @@
   byId("ride-form").addEventListener("submit", function (event) {
     event.preventDefault();
     try { const ride = Rides.saveForm(event.currentTarget); closeDialog(byId("ride-dialog")); toast(ride.route + " saved."); }
-    catch (error) { const node = byId("ride-form-error"); node.textContent = error.message; node.hidden = false; }
+    catch (error) { showFormError("ride-form-error", error); }
   });
 
   byId("bike-form").addEventListener("submit", function (event) {
     event.preventDefault();
     try { const bike = bikeFromForm(event.currentTarget); Storage.upsertBike(bike); closeDialog(byId("bike-dialog")); toast(bike.name + " saved."); }
-    catch (error) { const node = byId("bike-form-error"); node.textContent = error.message; node.hidden = false; }
+    catch (error) { showFormError("bike-form-error", error); }
   });
 
   Rides.bindFilters(function () { Rides.renderList(state); });
@@ -247,9 +250,36 @@
   });
   byId("reset-data-button").addEventListener("click", async function () { if (await confirmAction("Replace local data with the original sample rides?", "Reset data")) { Storage.resetToSeed(); toast("Seed data restored."); } });
   byId("clear-data-button").addEventListener("click", async function () { if (await confirmAction("Delete every local ride and bike? This cannot be undone.", "Clear everything")) { Storage.clearAll(); toast("All local data cleared."); } });
+  function renderAccount(status) {
+    const mode = status.mode || "local";
+    const shell = document.querySelector(".system-status");
+    if (shell) shell.dataset.mode = mode;
+    setText("sync-status", mode === "synced" ? "SYNCED" : mode === "api" ? "API READY" : "LOCAL");
+    setText("account-button", status.user ? status.user.username : "Sign in");
+    byId("account-auth-actions").hidden = Boolean(status.user);
+    byId("account-user-actions").hidden = !status.user;
+    byId("account-username").disabled = Boolean(status.user);
+    byId("account-password").disabled = Boolean(status.user);
+    setText("account-copy", status.user ? "Signed in as " + status.user.username + ". Your rides and garage sync through this server." : (status.online ? "Sign in to sync your private rides between devices." : "The API is offline. Local mode remains fully available."));
+  }
+  byId("account-button").addEventListener("click", function () { renderAccount(API.status()); showDialog(byId("account-dialog")); });
+  byId("account-form").addEventListener("submit", async function (event) {
+    event.preventDefault(); const errorNode = byId("account-error"); errorNode.hidden = true;
+    try { await API.login(byId("account-username").value.trim(), byId("account-password").value); closeDialog(byId("account-dialog")); toast("Account connected and rides synced."); }
+    catch (error) { showFormError("account-error", error); }
+  });
+  byId("register-button").addEventListener("click", async function () {
+    const errorNode = byId("account-error"); errorNode.hidden = true;
+    if (!byId("account-form").reportValidity()) return;
+    try { await API.register(byId("account-username").value.trim(), byId("account-password").value); closeDialog(byId("account-dialog")); toast("Account created and rides synced."); }
+    catch (error) { showFormError("account-error", error); }
+  });
+  byId("logout-button").addEventListener("click", async function () { await API.logout(); closeDialog(byId("account-dialog")); toast("Signed out. Local data remains on this device."); });
+  API.subscribe(renderAccount);
+  global.addEventListener("night-ride-sync-error", function (event) { toast("Sync paused: " + event.detail.message, true); });
   global.addEventListener("hashchange", route);
   Storage.subscribe(function (next) { state = next; renderAll(); });
 
-  state = Storage.load(); renderAll(); route();
+  state = Storage.load(); renderAll(); route(); API.bootstrap();
   if ("serviceWorker" in navigator && global.location.protocol !== "file:") navigator.serviceWorker.register("./sw.js").catch(function (error) { console.warn("Offline cache unavailable.", error); });
 })(window);

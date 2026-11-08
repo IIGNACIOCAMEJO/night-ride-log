@@ -223,16 +223,25 @@
   }
 
   function drawGame(context, model, width, height, timestamp) {
-    const ctx = context, roadLeft = width * 0.08, roadWidth = width * 0.84;
+    const ctx = context, roadLeft = width * 0.08, roadWidth = width * 0.84, horizon = height * 0.12;
     ctx.clearRect(0, 0, width, height);
-    const sky = ctx.createLinearGradient(0, 0, 0, height); sky.addColorStop(0, "#06101a"); sky.addColorStop(1, "#020304");
+    const sky = ctx.createLinearGradient(0, 0, 0, height); sky.addColorStop(0, "#020407"); sky.addColorStop(.18, "#07131a"); sky.addColorStop(1, "#010203");
     ctx.fillStyle = sky; ctx.fillRect(0, 0, width, height);
-    ctx.fillStyle = "#090d10"; ctx.fillRect(roadLeft, 0, roadWidth, height);
-    ctx.strokeStyle = "rgba(0,217,232,.55)"; ctx.lineWidth = Math.max(2, width * 0.008); ctx.strokeRect(roadLeft, 0, roadWidth, height);
+    ctx.save();
+    ctx.fillStyle = "rgba(0,217,232,.7)"; ctx.shadowColor = "#00d9e8"; ctx.shadowBlur = width * .05;
+    for (let i = 0; i < 15; i += 1) { const w = width * (.018 + (i % 4) * .012), x = (i * width * .071) % width, h = height * (.018 + (i % 5) * .014); ctx.fillRect(x, horizon - h, w, h); }
+    ctx.fillRect(0, horizon, width, Math.max(1, height * .002)); ctx.restore();
+    ctx.fillStyle = "#070a0c"; ctx.fillRect(roadLeft, horizon, roadWidth, height - horizon);
+    const roadGlow = ctx.createLinearGradient(roadLeft, 0, roadLeft + roadWidth, 0); roadGlow.addColorStop(0, "rgba(0,217,232,.16)"); roadGlow.addColorStop(.15, "transparent"); roadGlow.addColorStop(.85, "transparent"); roadGlow.addColorStop(1, "rgba(0,217,232,.16)");
+    ctx.fillStyle = roadGlow; ctx.fillRect(roadLeft, horizon, roadWidth, height - horizon);
+    ctx.strokeStyle = "rgba(0,217,232,.8)"; ctx.lineWidth = Math.max(2, width * 0.006); ctx.beginPath(); ctx.moveTo(roadLeft, horizon); ctx.lineTo(roadLeft, height); ctx.moveTo(roadLeft + roadWidth, horizon); ctx.lineTo(roadLeft + roadWidth, height); ctx.stroke();
+    ctx.strokeStyle = "rgba(0,217,232,.08)"; ctx.lineWidth = 1;
+    for (let row = 1; row < 15; row += 1) { const y = horizon + Math.pow(row / 15, 1.7) * (height - horizon); ctx.beginPath(); ctx.moveTo(roadLeft, y); ctx.lineTo(roadLeft + roadWidth, y); ctx.stroke(); }
     ctx.setLineDash([height * 0.045, height * 0.04]); ctx.lineDashOffset = (timestamp * model.speed * 0.00018) % (height * 0.085);
-    ctx.strokeStyle = "rgba(217,164,0,.42)"; ctx.lineWidth = Math.max(1, width * 0.004);
-    for (let lane = 1; lane < LANES; lane++) { const x = roadLeft + roadWidth * lane / LANES; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
+    ctx.strokeStyle = "rgba(255,209,56,.54)"; ctx.lineWidth = Math.max(1, width * 0.004);
+    for (let lane = 1; lane < LANES; lane++) { const x = roadLeft + roadWidth * lane / LANES; ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x, height); ctx.stroke(); }
     ctx.setLineDash([]);
+    ctx.fillStyle = "rgba(0,217,232,.7)"; ctx.font = `700 ${Math.max(8, width * .021)}px ui-monospace, monospace`; ctx.fillText("NRL // NIGHTGRID", roadLeft + 8, horizon + 16);
 
     function pointX(normalized) { return roadLeft + normalized * roadWidth; }
     for (const entity of model.entities) {
@@ -258,10 +267,12 @@
 
     const px = pointX(laneCenter(model.lane)), py = PLAYER_Y * height, pw = roadWidth * 0.14, ph = height * 0.15;
     if (model.invulnerableRemaining <= 0 || Math.floor(model.invulnerableRemaining / 100) % 2 === 0) {
-      ctx.save(); ctx.translate(px, py); ctx.shadowColor = "#00d9e8"; ctx.shadowBlur = width * 0.06; ctx.strokeStyle = "#00d9e8"; ctx.fillStyle = "#071519"; ctx.lineWidth = Math.max(2, width * 0.008);
-      ctx.beginPath(); ctx.ellipse(0, ph * 0.34, pw * 0.23, ph * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(0, -ph * 0.34, pw * 0.23, ph * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "#d9a400"; ctx.beginPath(); ctx.moveTo(0, ph * 0.25); ctx.lineTo(-pw * 0.26, -ph * 0.1); ctx.lineTo(0, -ph * 0.35); ctx.lineTo(pw * 0.26, -ph * 0.1); ctx.lineTo(0, ph * 0.25); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(px, py); ctx.shadowColor = "#00d9e8"; ctx.shadowBlur = width * 0.07; ctx.strokeStyle = "#00d9e8"; ctx.fillStyle = "#050b0e"; ctx.lineWidth = Math.max(2, width * 0.007);
+      ctx.beginPath(); ctx.ellipse(0, ph * .34, pw * .23, ph * .2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, -ph * .34, pw * .23, ph * .2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "#ffd138"; ctx.fillStyle = "#151204"; ctx.beginPath(); ctx.moveTo(0, -ph * .42); ctx.lineTo(pw * .28, ph * .02); ctx.lineTo(pw * .14, ph * .27); ctx.lineTo(-pw * .14, ph * .27); ctx.lineTo(-pw * .28, ph * .02); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#00d9e8"; ctx.fillRect(-pw * .25, -ph * .2, pw * .5, ph * .06);
+      ctx.strokeStyle = "rgba(0,217,232,.45)"; ctx.beginPath(); ctx.moveTo(-pw * .33, ph * .5); ctx.lineTo(-pw * .45, ph * .78); ctx.moveTo(pw * .33, ph * .5); ctx.lineTo(pw * .45, ph * .78); ctx.stroke(); ctx.restore();
     }
   }
 
@@ -315,6 +326,8 @@
       renderScores(); show("game"); const overlay = el("game-over-overlay"); if (overlay) overlay.hidden = false; sound.update(0, false);
     }
     function loop(timestamp) {
+      const arcadeView = el("view-arcade");
+      if (arcadeView && arcadeView.hidden) { last = timestamp; raf = win.requestAnimationFrame(loop); return; }
       if (!last) last = timestamp; const delta = timestamp - last; last = timestamp;
       if (model.running && !model.paused) {
         const events = model.update(delta);

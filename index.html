@@ -19,7 +19,8 @@
       </a>
       <div class="system-status" aria-label="System status">
         <span class="status-dot" aria-hidden="true"></span>
-        <span>LOCAL</span>
+        <span id="sync-status">LOCAL</span>
+        <button id="account-button" class="account-button" type="button" aria-haspopup="dialog">Sign in</button>
       </div>
     </header>
 
@@ -63,6 +64,7 @@
       </section>
 
       <section id="view-rides" class="view" data-view="rides" aria-labelledby="rides-title" hidden>
+        <aside id="shared-ride-banner" class="shared-ride-banner" hidden><p class="eyebrow">Shared transmission</p><strong>Shared ride</strong><span></span><small>Read-only preview — photos and account data are never included.</small></aside>
         <div class="page-heading">
           <div><p class="eyebrow">Run archive</p><h1 id="rides-title">Rides</h1><p id="rides-count" class="subtle">0 rides</p></div>
           <button class="button button-primary" type="button" data-action="new-ride">+ Log ride</button>
@@ -77,7 +79,7 @@
       </section>
 
       <section id="view-stats" class="view" data-view="stats" aria-labelledby="stats-title" hidden>
-        <div class="page-heading"><div><p class="eyebrow">Performance matrix</p><h1 id="stats-title">Stats</h1></div></div>
+        <div class="page-heading"><div><p class="eyebrow">Performance matrix</p><h1 id="stats-title">Stats</h1></div><div class="export-actions"><button class="button" type="button" data-export-format="csv">Export CSV</button><button class="button" type="button" data-export-format="pdf">Export PDF</button></div></div>
         <div class="stats-layout">
           <article class="panel chart-panel panel-wide">
             <div class="panel-heading"><div><p class="eyebrow">Six-month signal</p><h2>Monthly miles</h2></div></div>
@@ -102,6 +104,10 @@
           <button id="add-bike-button" class="button button-primary" type="button" data-action="new-bike">+ Add bike</button>
         </div>
         <div id="bike-list" class="bike-grid" aria-live="polite"><p class="empty-state">No bikes in the garage.</p></div>
+        <article class="panel maintenance-panel">
+          <div class="panel-heading"><div><p class="eyebrow">Service telemetry</p><h2>Maintenance reminders</h2></div><button class="button" type="button" data-maintenance-action="new">+ Reminder</button></div>
+          <div id="maintenance-list" class="maintenance-list" aria-live="polite"><p class="empty-state">No maintenance reminders.</p></div>
+        </article>
       </section>
 
       <section id="view-arcade" class="view arcade-view" data-view="arcade" aria-labelledby="arcade-title" hidden>
@@ -196,7 +202,7 @@
           <article class="panel action-card"><div><span class="action-icon" aria-hidden="true">↻</span><h2>Reset demo data</h2><p>Reload the original bikes and sample rides.</p></div><button id="reset-data-button" class="button" type="button">Reset to seed</button></article>
           <article class="panel action-card danger-card"><div><span class="action-icon" aria-hidden="true">×</span><h2>Clear all data</h2><p>Remove all local rides and bikes. This cannot be undone.</p></div><button id="clear-data-button" class="button button-danger" type="button">Clear everything</button></article>
         </div>
-        <p class="storage-note"><span class="status-dot" aria-hidden="true"></span> Your data stays in this browser. No account, cloud, or tracking.</p>
+        <p class="storage-note"><span class="status-dot" aria-hidden="true"></span> Local-first by default. Sign in only when you want private sync through this server; no third-party tracking.</p>
       </section>
     </main>
   </div>
@@ -216,8 +222,24 @@
         <fieldset class="field segmented-field"><legend>Time</legend><div class="segmented"><label><input type="radio" name="timeOfDay" value="night" checked><span>Night</span></label><label><input type="radio" name="timeOfDay" value="day"><span>Day</span></label></div></fieldset>
         <label class="field"><span>Weather</span><input id="ride-weather" name="weather" type="text" maxlength="80" placeholder="Clear, 54°F"></label>
         <label class="field field-wide"><span>Notes</span><textarea id="ride-notes" name="notes" rows="4" maxlength="500" placeholder="Road conditions, highlights, machine notes…"></textarea></label>
+        <div class="field field-wide route-import-field">
+          <span>Route track (GPX)</span>
+          <input id="ride-route-points" name="routePoints" type="hidden" value="[]">
+          <label class="button file-button route-file-button" for="ride-gpx-input">Import GPX track</label>
+          <input id="ride-gpx-input" class="sr-only" type="file" accept="application/gpx+xml,.gpx">
+          <small id="ride-gpx-status" class="subtle">Optional. Route data stays with this ride.</small>
+          <div id="ride-route-preview" class="route-map route-map--preview" aria-label="Imported route preview" hidden></div>
+        </div>
+        <div class="field field-wide photo-import-field">
+          <span>Ride photos</span>
+          <input id="ride-photos" name="photos" type="hidden" value="[]">
+          <label class="button file-button" for="ride-photo-input">Attach photos</label>
+          <input id="ride-photo-input" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp" multiple>
+          <small id="ride-photo-status" class="subtle" aria-live="polite">Up to 8 images, stored locally; signed-in rides sync to this private server.</small>
+          <div id="ride-photo-preview" class="ride-photo-strip"></div>
+        </div>
       </div>
-      <p id="ride-form-error" class="form-error" role="alert" hidden></p>
+      <p id="ride-form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
       <div class="modal-actions"><button class="button" type="button" data-action="close-ride-dialog">Cancel</button><button class="button button-primary" type="submit">Save ride</button></div>
     </form>
   </dialog>
@@ -231,9 +253,10 @@
         <label class="field"><span>Make</span><input id="bike-make" name="make" type="text" maxlength="60" placeholder="Yamaha"></label>
         <label class="field"><span>Model</span><input id="bike-model" name="model" type="text" maxlength="60" placeholder="MT-09"></label>
         <label class="field"><span>Year</span><input id="bike-year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2025"></label>
+        <label class="field"><span>Baseline odometer (miles)</span><input id="bike-odometer" name="odometer" type="number" min="0" max="9999999" step="0.1" inputmode="decimal" placeholder="12500"><small class="subtle">Logged ride miles are added to this baseline.</small></label>
         <label class="field"><span>Accent</span><input id="bike-color" name="color" type="color" value="#00d9e8"></label>
       </div>
-      <p id="bike-form-error" class="form-error" role="alert" hidden></p>
+      <p id="bike-form-error" class="form-error" role="alert" tabindex="-1" hidden></p>
       <div class="modal-actions"><button class="button" type="button" data-action="close-bike-dialog">Cancel</button><button class="button button-primary" type="submit">Save bike</button></div>
     </form>
   </dialog>
@@ -241,7 +264,36 @@
   <dialog id="confirm-dialog" class="modal confirm-modal" aria-labelledby="confirm-title">
     <form method="dialog">
       <div class="warning-mark" aria-hidden="true">!</div><h2 id="confirm-title">Confirm action</h2><p id="confirm-message">This action cannot be undone.</p>
-      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button id="confirm-action-button" class="button button-danger" value="confirm">Confirm</button></div>
+      <div class="modal-actions"><button class="button" type="submit" value="cancel">Cancel</button><button id="confirm-action-button" class="button button-danger" type="submit" value="confirm">Confirm</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="maintenance-dialog" class="modal modal-small" aria-labelledby="maintenance-title">
+    <form id="maintenance-form">
+      <div class="modal-header"><div><p class="eyebrow">Service protocol</p><h2 id="maintenance-title">Add reminder</h2></div><button class="icon-button" type="button" data-maintenance-action="close" aria-label="Close maintenance form">×</button></div>
+      <div class="form-grid">
+        <label class="field field-wide"><span>Bike</span><select id="maintenance-bike" name="bikeId" required></select></label>
+        <label class="field field-wide"><span>Service</span><input name="title" required maxlength="80" placeholder="Oil + filter"></label>
+        <label class="field"><span>Due date</span><input name="dueDate" type="date"></label>
+        <label class="field"><span>Due mileage</span><input name="dueMiles" type="number" min="0" step="1" inputmode="numeric"></label>
+      </div>
+      <p class="subtle">Set a date, mileage, or both. Mileage uses bike odometer plus logged miles.</p>
+      <p id="maintenance-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      <div class="modal-actions"><button class="button" type="button" data-maintenance-action="close">Cancel</button><button class="button button-primary" type="submit">Save reminder</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="account-dialog" class="modal modal-small" aria-labelledby="account-title">
+    <form id="account-form">
+      <div class="modal-header"><div><p class="eyebrow">Local sync identity</p><h2 id="account-title">Connect this device</h2></div><button class="icon-button" type="button" data-action="close-account-dialog" aria-label="Close account dialog">×</button></div>
+      <p id="account-copy" class="subtle">Sign in to sync your private rides between devices on this Night Ride Log server.</p>
+      <div class="form-grid">
+        <label class="field field-wide"><span>Username</span><input id="account-username" name="username" required minlength="3" maxlength="40" autocomplete="username"></label>
+        <label class="field field-wide"><span>Password</span><input id="account-password" name="password" type="password" required minlength="8" maxlength="128" autocomplete="current-password"></label>
+      </div>
+      <p id="account-error" class="form-error" role="alert" tabindex="-1" hidden></p>
+      <div id="account-auth-actions" class="modal-actions"><button id="register-button" class="button" type="button">Create account</button><button class="button button-primary" type="submit">Sign in</button></div>
+      <div id="account-user-actions" class="modal-actions" hidden><button id="logout-button" class="button button-danger" type="button">Sign out</button></div>
     </form>
   </dialog>
 
@@ -249,7 +301,11 @@
 
   <script src="seed.js"></script>
   <script src="storage.js"></script>
+  <script src="api.js"></script>
   <script src="rides.js"></script>
+  <script src="map-gpx.js"></script>
+  <script src="maintenance.js"></script>
+  <script src="data-tools.js"></script>
   <script src="stats.js"></script>
   <script src="game.js"></script>
   <script src="app.js"></script>
