@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#090b0d">
+  <meta name="description" content="Night Ride Log — an offline motorcycle ride tracker for the road after dark.">
+  <title>Night Ride Log</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#dashboard" data-view-link="dashboard" aria-label="Night Ride Log dashboard">
+        <span class="brand-mark" aria-hidden="true">NR</span>
+        <span><strong>Night Ride</strong><small>Log // Road System</small></span>
+      </a>
+      <div class="system-status" aria-label="System status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>LOCAL</span>
+      </div>
+    </header>
+
+    <nav class="primary-nav" aria-label="Primary navigation">
+      <a href="#dashboard" data-view-link="dashboard" class="nav-link is-active" aria-current="page"><span aria-hidden="true">▦</span>Dashboard</a>
+      <a href="#rides" data-view-link="rides" class="nav-link"><span aria-hidden="true">≡</span>Rides</a>
+      <a href="#stats" data-view-link="stats" class="nav-link"><span aria-hidden="true">⌁</span>Stats</a>
+      <a href="#garage" data-view-link="garage" class="nav-link"><span aria-hidden="true">◇</span>Garage</a>
+      <a href="#settings" data-view-link="settings" class="nav-link"><span aria-hidden="true">⚙</span>Data</a>
+    </nav>
+
+    <main id="main-content" tabindex="-1">
+      <section id="view-dashboard" class="view is-active" data-view="dashboard" aria-labelledby="dashboard-title">
+        <div class="page-heading">
+          <div><p class="eyebrow">Ride telemetry</p><h1 id="dashboard-title">Dashboard</h1></div>
+          <button class="button button-primary" type="button" data-action="new-ride">+ Log ride</button>
+        </div>
+
+        <div class="stat-grid" aria-label="Ride totals">
+          <article class="metric-card metric-accent"><span>Total rides</span><strong id="metric-total-rides">0</strong><small>logged runs</small></article>
+          <article class="metric-card"><span>Total miles</span><strong id="metric-total-miles">0</strong><small>all time</small></article>
+          <article class="metric-card"><span>Total hours</span><strong id="metric-total-hours">0</strong><small>in the saddle</small></article>
+          <article class="metric-card"><span>Longest ride</span><strong id="metric-longest-ride">0</strong><small>miles</small></article>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="panel month-panel">
+            <div class="panel-heading"><div><p class="eyebrow">Current cycle</p><h2>This month</h2></div><span id="month-label" class="chip">—</span></div>
+            <div class="month-summary">
+              <div><strong id="month-miles">0</strong><span>miles</span></div>
+              <div><strong id="month-rides">0</strong><span>rides</span></div>
+              <div><strong id="month-hours">0</strong><span>hours</span></div>
+            </div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Latest transmissions</p><h2>Recent rides</h2></div><a href="#rides" data-view-link="rides" class="text-link">View all →</a></div>
+            <div id="recent-rides" class="compact-list"><p class="empty-state">No rides logged yet.</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-rides" class="view" data-view="rides" aria-labelledby="rides-title" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">Run archive</p><h1 id="rides-title">Rides</h1><p id="rides-count" class="subtle">0 rides</p></div>
+          <button class="button button-primary" type="button" data-action="new-ride">+ Log ride</button>
+        </div>
+        <div class="filter-bar" role="search" aria-label="Filter rides">
+          <label class="field filter-search"><span>Search</span><input id="ride-search" type="search" placeholder="Route or notes…" autocomplete="off"></label>
+          <label class="field"><span>Bike</span><select id="ride-bike-filter"><option value="all">All bikes</option></select></label>
+          <label class="field"><span>Sort</span><select id="ride-sort"><option value="date-desc">Newest first</option><option value="date-asc">Oldest first</option><option value="miles-desc">Most miles</option><option value="miles-asc">Fewest miles</option></select></label>
+        </div>
+        <div id="rides-list" class="ride-list" aria-live="polite"></div>
+        <p id="rides-empty" class="empty-state" hidden>No rides match this signal.</p>
+      </section>
+
+      <section id="view-stats" class="view" data-view="stats" aria-labelledby="stats-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Performance matrix</p><h1 id="stats-title">Stats</h1></div></div>
+        <div class="stats-layout">
+          <article class="panel chart-panel panel-wide">
+            <div class="panel-heading"><div><p class="eyebrow">Six-month signal</p><h2>Monthly miles</h2></div></div>
+            <div class="canvas-wrap"><canvas id="monthly-miles-chart" role="img" aria-label="Monthly ride mileage for the last six months"></canvas></div>
+            <p id="monthly-chart-summary" class="sr-only"></p>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Machine load</p><h2>Miles by bike</h2></div></div>
+            <div id="bike-mileage-stats" class="bar-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Light profile</p><h2>Night vs day</h2></div></div>
+            <div id="time-split-chart" class="split-chart" role="img" aria-label="Night versus day mileage split"></div>
+            <div id="time-split-legend" class="legend"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="view-garage" class="view" data-view="garage" aria-labelledby="garage-title" hidden>
+        <div class="page-heading">
+          <div><p class="eyebrow">Machine registry</p><h1 id="garage-title">Garage</h1></div>
+          <button id="add-bike-button" class="button button-primary" type="button" data-action="new-bike">+ Add bike</button>
+        </div>
+        <div id="bike-list" class="bike-grid" aria-live="polite"><p class="empty-state">No bikes in the garage.</p></div>
+      </section>
+
+      <section id="view-settings" class="view" data-view="settings" aria-labelledby="settings-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Local datastore</p><h1 id="settings-title">Data &amp; settings</h1></div></div>
+        <div class="settings-grid">
+          <article class="panel action-card"><div><span class="action-icon" aria-hidden="true">⇩</span><h2>Export archive</h2><p>Download every ride and bike as a portable JSON file.</p></div><button id="export-data-button" class="button" type="button">Export JSON</button></article>
+          <article class="panel action-card"><div><span class="action-icon" aria-hidden="true">⇧</span><h2>Import archive</h2><p>Restore a Night Ride Log JSON export. Existing local data will be replaced.</p></div><label class="button file-button" for="import-data-input">Choose JSON</label><input id="import-data-input" class="sr-only" type="file" accept="application/json,.json"></article>
+          <article class="panel action-card"><div><span class="action-icon" aria-hidden="true">↻</span><h2>Reset demo data</h2><p>Reload the original bikes and sample rides.</p></div><button id="reset-data-button" class="button" type="button">Reset to seed</button></article>
+          <article class="panel action-card danger-card"><div><span class="action-icon" aria-hidden="true">×</span><h2>Clear all data</h2><p>Remove all local rides and bikes. This cannot be undone.</p></div><button id="clear-data-button" class="button button-danger" type="button">Clear everything</button></article>
+        </div>
+        <p class="storage-note"><span class="status-dot" aria-hidden="true"></span> Your data stays in this browser. No account, cloud, or tracking.</p>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="ride-dialog" class="modal" aria-labelledby="ride-dialog-title">
+    <form id="ride-form" method="dialog" novalidate>
+      <div class="modal-header"><div><p class="eyebrow">Ride record</p><h2 id="ride-dialog-title">Log a ride</h2></div><button class="icon-button" type="button" data-action="close-ride-dialog" aria-label="Close ride form">×</button></div>
+      <input id="ride-id" name="id" type="hidden">
+      <div class="form-grid">
+        <label class="field"><span>Date <b aria-hidden="true">*</b></span><input id="ride-date" name="date" type="date" required></label>
+        <label class="field field-wide"><span>Route name <b aria-hidden="true">*</b></span><input id="ride-route" name="route" type="text" maxlength="80" required placeholder="Midnight ridge run"></label>
+        <label class="field"><span>Start</span><input id="ride-start" name="start" type="text" maxlength="80" placeholder="Downtown"></label>
+        <label class="field"><span>End</span><input id="ride-end" name="end" type="text" maxlength="80" placeholder="North overlook"></label>
+        <label class="field"><span>Miles <b aria-hidden="true">*</b></span><input id="ride-miles" name="miles" type="number" required min="0.1" max="99999" step="0.1" inputmode="decimal"></label>
+        <label class="field"><span>Duration (minutes) <b aria-hidden="true">*</b></span><input id="ride-duration" name="duration" type="number" required min="1" max="10000" step="1" inputmode="numeric"></label>
+        <label class="field"><span>Bike <b aria-hidden="true">*</b></span><select id="ride-bike" name="bikeId" required><option value="">Select bike</option></select></label>
+        <fieldset class="field segmented-field"><legend>Time</legend><div class="segmented"><label><input type="radio" name="timeOfDay" value="night" checked><span>Night</span></label><label><input type="radio" name="timeOfDay" value="day"><span>Day</span></label></div></fieldset>
+        <label class="field"><span>Weather</span><input id="ride-weather" name="weather" type="text" maxlength="80" placeholder="Clear, 54°F"></label>
+        <label class="field field-wide"><span>Notes</span><textarea id="ride-notes" name="notes" rows="4" maxlength="500" placeholder="Road conditions, highlights, machine notes…"></textarea></label>
+      </div>
+      <p id="ride-form-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button" type="button" data-action="close-ride-dialog">Cancel</button><button class="button button-primary" type="submit">Save ride</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="bike-dialog" class="modal modal-small" aria-labelledby="bike-dialog-title">
+    <form id="bike-form" method="dialog" novalidate>
+      <div class="modal-header"><div><p class="eyebrow">Machine record</p><h2 id="bike-dialog-title">Add bike</h2></div><button class="icon-button" type="button" data-action="close-bike-dialog" aria-label="Close bike form">×</button></div>
+      <input id="bike-id" name="id" type="hidden">
+      <div class="form-grid">
+        <label class="field field-wide"><span>Bike name <b aria-hidden="true">*</b></span><input id="bike-name" name="name" type="text" maxlength="60" required placeholder="Nightshift"></label>
+        <label class="field"><span>Make</span><input id="bike-make" name="make" type="text" maxlength="60" placeholder="Yamaha"></label>
+        <label class="field"><span>Model</span><input id="bike-model" name="model" type="text" maxlength="60" placeholder="MT-09"></label>
+        <label class="field"><span>Year</span><input id="bike-year" name="year" type="number" min="1900" max="2100" inputmode="numeric" placeholder="2025"></label>
+        <label class="field"><span>Accent</span><input id="bike-color" name="color" type="color" value="#00d9e8"></label>
+      </div>
+      <p id="bike-form-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-actions"><button class="button" type="button" data-action="close-bike-dialog">Cancel</button><button class="button button-primary" type="submit">Save bike</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="confirm-dialog" class="modal confirm-modal" aria-labelledby="confirm-title">
+    <form method="dialog">
+      <div class="warning-mark" aria-hidden="true">!</div><h2 id="confirm-title">Confirm action</h2><p id="confirm-message">This action cannot be undone.</p>
+      <div class="modal-actions"><button class="button" value="cancel">Cancel</button><button id="confirm-action-button" class="button button-danger" value="confirm">Confirm</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast-region" class="toast-region" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script src="seed.js"></script>
+  <script src="storage.js"></script>
+  <script src="rides.js"></script>
+  <script src="stats.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
