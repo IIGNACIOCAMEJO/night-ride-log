@@ -1,7 +1,7 @@
 "use strict";
 
-const CACHE = "night-ride-log-v1";
-const ASSETS = ["./", "./index.html", "./styles.css", "./seed.js", "./storage.js", "./rides.js", "./stats.js", "./app.js"];
+const CACHE = "night-ride-log-v2-neon-run";
+const ASSETS = ["./", "./index.html", "./styles.css", "./seed.js", "./storage.js", "./rides.js", "./stats.js", "./game.js", "./app.js"];
 
 self.addEventListener("install", function (event) {
   event.waitUntil(caches.open(CACHE).then(function (cache) { return cache.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));

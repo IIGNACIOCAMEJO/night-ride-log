@@ -4,7 +4,7 @@
   const Storage = global.NightRideStorage;
   const Rides = global.NightRideRides;
   const Stats = global.NightRideStats;
-  const views = new Set(["dashboard", "rides", "stats", "garage", "settings"]);
+  const views = new Set(["dashboard", "rides", "stats", "garage", "arcade", "settings"]);
   let state;
   let pendingConfirmation = null;
 
@@ -50,6 +50,9 @@
 
   function route() {
     const active = currentView();
+    if (active !== "arcade" && global.neonRunGame && global.neonRunGame.model.running && !global.neonRunGame.model.paused) {
+      global.neonRunGame.pause();
+    }
     document.querySelectorAll("[data-view]").forEach(function (section) {
       const selected = section.dataset.view === active;
       section.hidden = !selected;

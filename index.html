@@ -28,6 +28,7 @@
       <a href="#rides" data-view-link="rides" class="nav-link"><span aria-hidden="true">≡</span>Rides</a>
       <a href="#stats" data-view-link="stats" class="nav-link"><span aria-hidden="true">⌁</span>Stats</a>
       <a href="#garage" data-view-link="garage" class="nav-link"><span aria-hidden="true">◇</span>Garage</a>
+      <a href="#arcade" data-view-link="arcade" class="nav-link"><span aria-hidden="true">▰</span>Arcade</a>
       <a href="#settings" data-view-link="settings" class="nav-link"><span aria-hidden="true">⚙</span>Data</a>
     </nav>
 
@@ -103,6 +104,90 @@
         <div id="bike-list" class="bike-grid" aria-live="polite"><p class="empty-state">No bikes in the garage.</p></div>
       </section>
 
+      <section id="view-arcade" class="view arcade-view" data-view="arcade" aria-labelledby="arcade-title" hidden>
+        <div class="page-heading arcade-heading">
+          <div><p class="eyebrow">Midnight protocol // 01</p><h1 id="arcade-title">Neon Run</h1><p class="subtle">Thread the night traffic. Keep the signal alive.</p></div>
+          <button id="arcade-mute" class="button arcade-mute" type="button" data-game-action="mute" aria-pressed="false"><span aria-hidden="true">◖</span> Sound on</button>
+        </div>
+
+        <div id="arcade-menu" class="arcade-menu">
+          <article class="panel arcade-briefing">
+            <div class="arcade-kicker" aria-hidden="true"><span>3</span><small>lanes</small></div>
+            <div>
+              <p class="eyebrow">Dispatch briefing</p>
+              <h2>Ride fast. Stay sharp.</h2>
+              <p>Switch lanes to dodge cars, barriers, and cones. Grab fuel cells and wrenches for bonus points. Three crashes end the run.</p>
+              <button id="arcade-start" class="button button-primary arcade-start" type="button" data-game-action="start">Start run <span aria-hidden="true">→</span></button>
+            </div>
+          </article>
+
+          <div class="arcade-menu-grid">
+            <article class="panel arcade-controls-card">
+              <div class="panel-heading"><div><p class="eyebrow">Control map</p><h2>How to ride</h2></div></div>
+              <dl class="control-map">
+                <div><dt>Steer</dt><dd>Swipe or tap ◀ ▶</dd></div>
+                <div><dt>Brake</dt><dd>Hold the brake button</dd></div>
+                <div><dt>Keyboard</dt><dd>← → steer · ↓ brake</dd></div>
+                <div><dt>System</dt><dd><kbd>P</kbd> pause · <kbd>Space</kbd> start</dd></div>
+              </dl>
+            </article>
+            <article class="panel arcade-scores-card">
+              <div class="panel-heading"><div><p class="eyebrow">Local legends</p><h2>Top runs</h2></div><span class="chip">Top 10</span></div>
+              <div class="score-table-wrap">
+                <table class="score-table">
+                  <thead><tr><th scope="col">#</th><th scope="col">Score</th><th scope="col">Distance</th><th scope="col">Date</th></tr></thead>
+                  <tbody id="arcade-high-score-body"><tr><td colspan="4">No runs logged. Own the road.</td></tr></tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <div id="game-stage" class="game-stage" hidden>
+          <div id="game-hud" class="game-hud" aria-label="Run telemetry">
+            <div><span>Speed</span><strong id="hud-speed">0</strong><small>mph</small></div>
+            <div><span>Distance</span><strong id="hud-distance">0.00</strong><small>mi</small></div>
+            <div><span>Score</span><strong id="hud-score">0</strong></div>
+            <div><span>Lives</span><strong id="hud-lives" class="hud-lives" aria-label="3 lives">♥ ♥ ♥</strong></div>
+            <button id="game-pause" class="icon-button game-pause-button" type="button" data-game-action="pause" aria-label="Pause run">Ⅱ</button>
+          </div>
+
+          <div id="game-canvas-shell" class="game-canvas-shell">
+            <canvas id="game-canvas" width="420" height="700" role="img" aria-label="Three-lane night highway. Steer the motorcycle around obstacles and into pickups."></canvas>
+            <p id="game-status" class="sr-only" role="status" aria-live="polite"></p>
+
+            <div id="game-pause-overlay" class="game-overlay" hidden>
+              <div class="game-overlay-card" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+                <p class="eyebrow">System hold</p><h2 id="pause-title">Run paused</h2>
+                <div class="game-overlay-actions"><button id="game-resume" class="button button-primary" type="button" data-game-action="resume">Resume</button><button id="game-restart" class="button" type="button" data-game-action="restart">Restart</button><button id="game-quit" class="button button-danger" type="button" data-game-action="quit">Quit to menu</button></div>
+              </div>
+            </div>
+
+            <div id="game-over-overlay" class="game-overlay game-over-overlay" hidden>
+              <div class="game-overlay-card game-over-card" role="dialog" aria-modal="true" aria-labelledby="game-over-title">
+                <p class="eyebrow">Signal terminated</p><h2 id="game-over-title">Run over</h2>
+                <div class="final-telemetry">
+                  <div><span>Score</span><strong id="final-score">0</strong></div>
+                  <div><span>Distance</span><strong id="final-distance">0.00 mi</strong></div>
+                  <div><span>Best</span><strong id="final-best">0</strong></div>
+                </div>
+                <div class="score-table-wrap game-over-scores">
+                  <table class="score-table"><caption>Top 10 local runs</caption><thead><tr><th scope="col">#</th><th scope="col">Score</th><th scope="col">Distance</th><th scope="col">Date</th></tr></thead><tbody id="game-over-score-body"><tr><td colspan="4">No runs logged.</td></tr></tbody></table>
+                </div>
+                <div class="game-overlay-actions"><button id="game-play-again" class="button button-primary" type="button" data-game-action="restart">Run again</button><button id="game-over-quit" class="button" type="button" data-game-action="quit">Arcade menu</button></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="game-touch-controls" aria-label="Touch ride controls">
+            <button id="game-left" class="game-control game-control-steer" type="button" data-game-action="left" aria-label="Move one lane left"><span aria-hidden="true">◀</span><small>Left</small></button>
+            <button id="game-brake" class="game-control game-control-brake" type="button" data-game-action="brake" aria-label="Brake"><span aria-hidden="true">▾</span><small>Brake</small></button>
+            <button id="game-right" class="game-control game-control-steer" type="button" data-game-action="right" aria-label="Move one lane right"><span aria-hidden="true">▶</span><small>Right</small></button>
+          </div>
+          <p class="game-touch-hint">Swipe the road or use the controls. Brake to buy time.</p>
+        </div>
+      </section>
+
       <section id="view-settings" class="view" data-view="settings" aria-labelledby="settings-title" hidden>
         <div class="page-heading"><div><p class="eyebrow">Local datastore</p><h1 id="settings-title">Data &amp; settings</h1></div></div>
         <div class="settings-grid">
@@ -166,6 +251,7 @@
   <script src="storage.js"></script>
   <script src="rides.js"></script>
   <script src="stats.js"></script>
+  <script src="game.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
