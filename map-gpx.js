@@ -84,6 +84,15 @@
     [coords[0], coords[coords.length - 1]].forEach(function (point) {
       const circle = document.createElementNS(NS, "circle"); circle.setAttribute("cx", point[0]); circle.setAttribute("cy", point[1]); circle.setAttribute("r", "5"); circle.setAttribute("class", "route-map__point"); svg.append(circle);
     });
+    [[coords[0], "START"], [coords[coords.length - 1], "FINISH"]].forEach(function (entry) {
+      const label = document.createElementNS(NS, "text");
+      label.setAttribute("x", entry[0][0]);
+      label.setAttribute("y", entry[0][1] < 45 ? entry[0][1] + 18 : entry[0][1] - 10);
+      label.setAttribute("class", "route-map__label");
+      label.setAttribute("text-anchor", entry[0][0] > width / 2 ? "end" : "start");
+      label.textContent = entry[1];
+      svg.append(label);
+    });
     container.append(svg);
   }
 
@@ -133,6 +142,6 @@
     new MutationObserver(function () { drawPendingMaps(); }).observe(document.getElementById("rides-list") || document.body, { childList: true, subtree: true });
   }
 
-  global.NightRideGPX = Object.freeze({ parseGPX: parseGPX, toGPX: toGPX, drawMap: drawMap, normalizePoints: normalizePoints });
+  global.NightRideGPX = Object.freeze({ parseGPX: parseGPX, toGPX: toGPX, drawMap: drawMap, drawPendingMaps: drawPendingMaps, normalizePoints: normalizePoints });
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
 })(window);

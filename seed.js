@@ -36,7 +36,13 @@
       bikeId: "bike-nightshade",
       period: "night",
       weather: "Clear, 54°F",
-      notes: "Quiet roads after midnight; stopped beneath the east bridge lights."
+      notes: "Quiet roads after midnight; stopped beneath the east bridge lights.",
+      routePoints: [
+        { lat: 39.7391, lon: -104.9903 }, { lat: 39.7427, lon: -104.9774 },
+        { lat: 39.7518, lon: -104.9671 }, { lat: 39.7624, lon: -104.9748 },
+        { lat: 39.7688, lon: -104.9907 }, { lat: 39.7594, lon: -105.0041 },
+        { lat: 39.7462, lon: -105.0068 }, { lat: 39.7391, lon: -104.9903 }
+      ]
     },
     {
       id: "ride-2026-10-18-ridge",
@@ -49,7 +55,13 @@
       bikeId: "bike-nightshade",
       period: "day",
       weather: "Partly cloudy, 61°F",
-      notes: "Dry pavement and a strong crosswind on the upper switchbacks."
+      notes: "Dry pavement and a strong crosswind on the upper switchbacks.",
+      routePoints: [
+        { lat: 39.7733, lon: -105.0438 }, { lat: 39.7857, lon: -105.0692 },
+        { lat: 39.7984, lon: -105.0911 }, { lat: 39.8119, lon: -105.1063 },
+        { lat: 39.8248, lon: -105.1012 }, { lat: 39.8351, lon: -105.0834 },
+        { lat: 39.8427, lon: -105.0586 }
+      ]
     },
     {
       id: "ride-2026-10-06-industrial",
@@ -62,7 +74,12 @@
       bikeId: "bike-ghost",
       period: "night",
       weather: "Light mist, 49°F",
-      notes: "Refinery glow reflected off wet streets; visor stayed clear."
+      notes: "Refinery glow reflected off wet streets; visor stayed clear.",
+      routePoints: [
+        { lat: 39.7694, lon: -104.9985 }, { lat: 39.7781, lon: -104.9842 },
+        { lat: 39.7836, lon: -104.9628 }, { lat: 39.7762, lon: -104.9461 },
+        { lat: 39.7628, lon: -104.9497 }, { lat: 39.7543, lon: -104.9695 }
+      ]
     },
     {
       id: "ride-2026-09-24-canyon",

@@ -81,6 +81,15 @@
     setText("month-miles", miles(summary.thisMonth.miles));
     setText("month-hours", hours(summary.thisMonth.minutes));
 
+    const split = Stats.dayNightSplit(state.rides);
+    const trackedMiles = split.night.miles + split.day.miles;
+    const nightShare = trackedMiles ? Math.round(split.night.miles / trackedMiles * 100) : 0;
+    const averageMiles = summary.totalRides ? summary.totalMiles / summary.totalRides : 0;
+    const primaryBike = Stats.milesByBike(state.rides, state.bikes).filter(function (bike) { return bike.rides > 0; })[0];
+    setText("signal-night-share", nightShare + "%");
+    setText("signal-average-miles", miles(averageMiles));
+    setText("signal-primary-bike", primaryBike ? primaryBike.name : "No rides yet");
+
     const recent = byId("recent-rides");
     recent.replaceChildren();
     const bikeMap = new Map(state.bikes.map(function (bike) { return [bike.id, bike.name]; }));

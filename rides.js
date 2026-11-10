@@ -204,6 +204,7 @@
       rides.forEach(function (ride) { fragment.append(makeRideCard(ride, bikes.get(ride.bikeId))); });
       list.append(fragment);
       list.hidden = rides.length === 0;
+      if (global.NightRideGPX && typeof global.NightRideGPX.drawPendingMaps === "function") global.NightRideGPX.drawPendingMaps(list);
     }
     const empty = settings.empty || first(root, SELECTORS.empty);
     if (empty) empty.hidden = rides.length !== 0;

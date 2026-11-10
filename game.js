@@ -11,7 +11,8 @@
   const PLAYER_Y = 0.79;
   const BASE_SPEED = 54;
   const MAX_SPEED = 132;
-  const HIT_INVULNERABILITY = 1450;
+  const HIT_INVULNERABILITY = 6500;
+  const OPENING_GRACE_MS = 4500;
   const ENTITY_TYPES = {
     car: { kind: "obstacle", width: 0.19, height: 0.15 },
     barrier: { kind: "obstacle", width: 0.23, height: 0.09 },
@@ -82,7 +83,7 @@
       this.speed = BASE_SPEED;
       this.brakeRemaining = 0;
       this.invulnerableRemaining = 0;
-      this.spawnRemaining = 760;
+      this.spawnRemaining = 1800;
       this.entities = [];
       this.running = false;
       this.paused = false;
@@ -127,8 +128,8 @@
     }
 
     spawn() {
-      const difficulty = clamp(this.elapsed / 75000, 0, 1);
-      const pickupChance = 0.2;
+      const difficulty = clamp((this.elapsed - OPENING_GRACE_MS) / 95000, 0, 1);
+      const pickupChance = this.elapsed < OPENING_GRACE_MS ? 1 : 0.2;
       let type;
       const roll = this.random();
       if (roll < pickupChance) type = this.random() < 0.58 ? "fuel" : "wrench";
@@ -169,13 +170,13 @@
       this.elapsed += dt;
       this.brakeRemaining = Math.max(0, this.brakeRemaining - dt);
       this.invulnerableRemaining = Math.max(0, this.invulnerableRemaining - dt);
-      const ramp = clamp(this.elapsed / 90000, 0, 1);
+      const ramp = clamp((this.elapsed - 2500) / 110000, 0, 1);
       const targetSpeed = BASE_SPEED + (MAX_SPEED - BASE_SPEED) * ramp;
       this.speed = this.brakeRemaining > 0 ? Math.max(32, targetSpeed * 0.55) : targetSpeed;
       this.distance += this.speed * (dt / 3600000);
       this.score = Math.floor(this.distance * 1000) + this.pickupScore;
 
-      const flow = (0.00018 + ramp * 0.00012) * this.speed / BASE_SPEED;
+      const flow = (0.000155 + ramp * 0.000145) * this.speed / BASE_SPEED;
       for (const entity of this.entities) entity.y += flow * dt;
       this.resolveCollisions();
       this.entities = this.entities.filter(function (entity) { return !entity.resolved && entity.y < 1.2; });
@@ -183,8 +184,8 @@
       this.spawnRemaining -= dt;
       if (this.spawnRemaining <= 0) {
         this.spawn();
-        const baseInterval = 1050 - ramp * 500;
-        this.spawnRemaining = baseInterval * (0.75 + this.random() * 0.5);
+        const baseInterval = 1750 - ramp * 1125;
+        this.spawnRemaining = baseInterval * (0.82 + this.random() * 0.36);
       }
       return this.events.slice();
     }
@@ -241,7 +242,7 @@
     ctx.strokeStyle = "rgba(255,209,56,.54)"; ctx.lineWidth = Math.max(1, width * 0.004);
     for (let lane = 1; lane < LANES; lane++) { const x = roadLeft + roadWidth * lane / LANES; ctx.beginPath(); ctx.moveTo(x, horizon); ctx.lineTo(x, height); ctx.stroke(); }
     ctx.setLineDash([]);
-    ctx.fillStyle = "rgba(0,217,232,.7)"; ctx.font = `700 ${Math.max(8, width * .021)}px ui-monospace, monospace`; ctx.fillText("NRL // NIGHTGRID", roadLeft + 8, horizon + 16);
+    ctx.fillStyle = "rgba(0,217,232,.7)"; ctx.font = `700 ${Math.max(8, width * .021)}px ui-monospace, monospace`; ctx.fillText("NIGHTGRID // ONLINE", roadLeft + 8, horizon + 18);
 
     function pointX(normalized) { return roadLeft + normalized * roadWidth; }
     for (const entity of model.entities) {
@@ -267,12 +268,26 @@
 
     const px = pointX(laneCenter(model.lane)), py = PLAYER_Y * height, pw = roadWidth * 0.14, ph = height * 0.15;
     if (model.invulnerableRemaining <= 0 || Math.floor(model.invulnerableRemaining / 100) % 2 === 0) {
-      ctx.save(); ctx.translate(px, py); ctx.shadowColor = "#00d9e8"; ctx.shadowBlur = width * 0.07; ctx.strokeStyle = "#00d9e8"; ctx.fillStyle = "#050b0e"; ctx.lineWidth = Math.max(2, width * 0.007);
-      ctx.beginPath(); ctx.ellipse(0, ph * .34, pw * .23, ph * .2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.beginPath(); ctx.ellipse(0, -ph * .34, pw * .23, ph * .2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-      ctx.strokeStyle = "#ffd138"; ctx.fillStyle = "#151204"; ctx.beginPath(); ctx.moveTo(0, -ph * .42); ctx.lineTo(pw * .28, ph * .02); ctx.lineTo(pw * .14, ph * .27); ctx.lineTo(-pw * .14, ph * .27); ctx.lineTo(-pw * .28, ph * .02); ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.fillStyle = "#00d9e8"; ctx.fillRect(-pw * .25, -ph * .2, pw * .5, ph * .06);
-      ctx.strokeStyle = "rgba(0,217,232,.45)"; ctx.beginPath(); ctx.moveTo(-pw * .33, ph * .5); ctx.lineTo(-pw * .45, ph * .78); ctx.moveTo(pw * .33, ph * .5); ctx.lineTo(pw * .45, ph * .78); ctx.stroke(); ctx.restore();
+      ctx.save(); ctx.translate(px, py); ctx.shadowColor = "#00d9e8"; ctx.shadowBlur = width * 0.07; ctx.lineCap = "round"; ctx.lineJoin = "round";
+      const outline = Math.max(2, width * 0.006);
+      /* Two rubber wheels establish the top-down motorcycle silhouette. */
+      ctx.fillStyle = "#020405"; ctx.strokeStyle = "#00d9e8"; ctx.lineWidth = outline;
+      [-0.4, 0.38].forEach(function (offset) {
+        ctx.beginPath(); ctx.ellipse(0, ph * offset, pw * .18, ph * .19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.strokeStyle = "rgba(255,209,56,.7)"; ctx.lineWidth = Math.max(1, outline * .45); ctx.beginPath(); ctx.moveTo(-pw * .12, ph * offset); ctx.lineTo(pw * .12, ph * offset); ctx.stroke();
+        ctx.strokeStyle = "#00d9e8"; ctx.lineWidth = outline;
+      });
+      /* Fork, frame, tank, tail and handlebars read as a machine instead of a gem. */
+      ctx.strokeStyle = "#ffd138"; ctx.lineWidth = outline;
+      ctx.beginPath(); ctx.moveTo(0, -ph * .35); ctx.lineTo(0, ph * .31); ctx.moveTo(0, -ph * .2); ctx.lineTo(-pw * .29, ph * .16); ctx.lineTo(0, ph * .29); ctx.lineTo(pw * .29, ph * .16); ctx.lineTo(0, -ph * .2); ctx.stroke();
+      ctx.fillStyle = "#102027"; ctx.strokeStyle = "#00d9e8"; ctx.beginPath(); ctx.roundRect(-pw * .25, -ph * .2, pw * .5, ph * .42, pw * .16); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = "#ffd138"; ctx.beginPath(); ctx.roundRect(-pw * .18, ph * .18, pw * .36, ph * .16, pw * .08); ctx.fill();
+      ctx.strokeStyle = "#00d9e8"; ctx.lineWidth = outline; ctx.beginPath(); ctx.moveTo(-pw * .38, -ph * .24); ctx.lineTo(pw * .38, -ph * .24); ctx.stroke();
+      ctx.fillStyle = "#f5f9f9"; ctx.shadowColor = "#ffd138"; ctx.beginPath(); ctx.arc(0, -ph * .14, pw * .2, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#ffd138"; ctx.stroke();
+      ctx.fillStyle = "#071419"; ctx.beginPath(); ctx.arc(0, -ph * .17, pw * .14, Math.PI, Math.PI * 2); ctx.fill();
+      /* Rider leans forward: shoulders, arms on the bars, and boots at the pegs. */
+      ctx.strokeStyle = "#ffd138"; ctx.lineWidth = outline * 1.15; ctx.beginPath(); ctx.moveTo(0, -ph * .02); ctx.lineTo(-pw * .27, -ph * .2); ctx.lineTo(-pw * .36, -ph * .24); ctx.moveTo(0, -ph * .02); ctx.lineTo(pw * .27, -ph * .2); ctx.lineTo(pw * .36, -ph * .24); ctx.moveTo(-pw * .08, ph * .08); ctx.lineTo(-pw * .28, ph * .22); ctx.moveTo(pw * .08, ph * .08); ctx.lineTo(pw * .28, ph * .22); ctx.stroke();
+      ctx.strokeStyle = "rgba(0,217,232,.45)"; ctx.lineWidth = outline; ctx.beginPath(); ctx.moveTo(-pw * .16, ph * .52); ctx.lineTo(-pw * .27, ph * .78); ctx.moveTo(pw * .16, ph * .52); ctx.lineTo(pw * .27, ph * .78); ctx.stroke(); ctx.restore();
     }
   }
 
